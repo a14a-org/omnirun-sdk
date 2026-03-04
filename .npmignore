@@ -1,0 +1,7 @@
+src/
+tests/
+examples/
+.github/
+.changeset/
+vitest.config.ts
+tsconfig.json

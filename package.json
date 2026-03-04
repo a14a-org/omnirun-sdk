@@ -1,0 +1,63 @@
+{
+  "name": "@omnirun/sdk",
+  "version": "0.3.0",
+  "description": "TypeScript SDK for OmniRun sandboxes",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit tests/contract",
+    "test:integration": "RUN_OMNIRUN_INTEGRATION=1 vitest run tests/integration",
+    "test:watch": "vitest",
+    "pack:smoke": "npm pack --dry-run",
+    "examples:hosted": "npm run build && node examples/hosted/run-all.mjs",
+    "examples:hosted:preflight": "npm run build && node examples/hosted/run-all.mjs preflight",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish"
+  },
+  "keywords": [
+    "omnirun",
+    "sandbox",
+    "firecracker",
+    "typescript",
+    "sdk"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/a14a-org/omnirun-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/a14a-org/omnirun-sdk/issues"
+  },
+  "homepage": "https://github.com/a14a-org/omnirun-sdk#readme",
+  "devDependencies": {
+    "@changesets/cli": "^2.29.7",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
