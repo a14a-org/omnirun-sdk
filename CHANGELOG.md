@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+### Minor Changes
+
+- 0985988: Initial standalone release of the OmniRun TypeScript SDK with CI and publish automation.
+
 All notable changes to this project will be documented in this file.
 
 ## 0.3.0 - 2026-03-04
