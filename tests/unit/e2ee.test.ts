@@ -6,8 +6,10 @@ import {
   generateE2EEKeyPair,
 } from "../../src/e2ee.js";
 
+const hasWebCrypto = typeof globalThis.crypto?.subtle !== "undefined";
+
 describe("E2EE helpers", () => {
-  it("generates keypair and roundtrips encrypted payload", async () => {
+  it.skipIf(!hasWebCrypto)("generates keypair and roundtrips encrypted payload", async () => {
     const client = await generateE2EEKeyPair();
     const server = await generateE2EEKeyPair();
 

@@ -69,6 +69,48 @@ export interface FullSandboxInfo extends SandboxInfo {
   memoryMB: number;
 }
 
+export type ExposureVisibility = "public" | "private";
+
+export type ExposureStatus =
+  | "pending"
+  | "ready"
+  | "revoked"
+  | "expired"
+  | "sandbox_stopped"
+  | "error";
+
+export interface ExposureInfo {
+  id: string;
+  sandboxId: string;
+  accountId?: string;
+  port: number;
+  hostname: string;
+  url: string;
+  accessUrl?: string;
+  visibility: ExposureVisibility;
+  status: ExposureStatus;
+  createdAt: string;
+  expiresAt: string;
+  revokedAt?: string;
+  sandboxStoppedAt?: string;
+  lastAccessedAt?: string;
+  openPath?: string;
+  preserveHost: boolean;
+  createdBy?: string;
+}
+
+export interface CreateExposureOptions {
+  visibility?: ExposureVisibility;
+  ttlSeconds?: number;
+  slug?: string;
+  openPath?: string;
+  preserveHost?: boolean;
+}
+
+export interface RefreshExposureOptions {
+  ttlSeconds?: number;
+}
+
 export interface RunCommandOptions {
   cwd?: string;
   timeout?: number;

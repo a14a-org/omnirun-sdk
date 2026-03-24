@@ -43,6 +43,15 @@ const content = await sbx.files.read("/tmp/input.txt");
 const bytes = await sbx.files.read("/tmp/input.txt", "bytes");
 ```
 
+## Signed URLs
+
+```ts
+const uploadUrl = await sbx.uploadUrl("/tmp/report.json");
+const downloadUrl = await sbx.downloadUrl("/tmp/report.json");
+```
+
+Use `uploadUrl` with multipart form-data when you need to move artifacts across the sandbox boundary.
+
 ## Streaming
 
 ```ts
@@ -55,6 +64,17 @@ for await (const event of command) {
     process.stdout.write(event.data ?? "");
   }
 }
+```
+
+## Production controls
+
+```ts
+await sbx.production.setNetworkPolicy({
+  allowDomains: ["api.openai.com"],
+});
+
+const metrics = await sbx.production.metrics();
+const snapshots = await sbx.production.metricsSnapshots();
 ```
 
 ## Integration tests
