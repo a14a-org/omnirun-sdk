@@ -9,9 +9,12 @@ import {
   type E2EESessionInfo,
 } from "./e2ee.js";
 import { Filesystem } from "./filesystem.js";
+import { Exposures } from "./exposures.js";
 import type {
   CodeResult,
   CreateSandboxOptions,
+  CreateExposureOptions,
+  ExposureInfo,
   FullSandboxInfo,
   ListSandboxOptions,
   MetricsSnapshot,
@@ -120,6 +123,7 @@ export class Sandbox {
   readonly files: Filesystem;
   readonly pty: Pty;
   readonly contexts: Contexts;
+  readonly exposures: Exposures;
   readonly production: Production;
   readonly webhooks: Webhooks;
   e2ee: E2EESessionInfo | null = null;
@@ -134,6 +138,7 @@ export class Sandbox {
     this.files = new Filesystem(sandboxId, client);
     this.pty = new Pty(sandboxId, client);
     this.contexts = new Contexts(sandboxId, client);
+    this.exposures = new Exposures(sandboxId, client);
     this.production = new Production(sandboxId, client);
     this.webhooks = new Webhooks(client);
   }
@@ -276,6 +281,11 @@ export class Sandbox {
   /** Get public URL for a port exposed inside the sandbox. */
   getHost(port: number): string {
     return `https://${this.sandboxId}-${port}.claudebox.io`;
+  }
+
+  /** Create a managed preview URL for a sandbox port. */
+  async expose(port: number, opts?: CreateExposureOptions): Promise<ExposureInfo> {
+    return this.exposures.create(port, opts);
   }
 
   /** Get a pre-signed download URL for a file. */

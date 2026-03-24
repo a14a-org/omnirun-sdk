@@ -5,6 +5,7 @@ export { CommandHandle } from "./command-handle.js";
 export { Filesystem } from "./filesystem.js";
 export { Pty, PtySession } from "./pty.js";
 export { Contexts } from "./contexts.js";
+export { Exposures } from "./exposures.js";
 export { Production } from "./production.js";
 export { Webhooks } from "./webhooks.js";
 export { WatchHandle } from "./watch-handle.js";
@@ -30,6 +31,9 @@ export type {
   EntryInfo,
   SandboxInfo,
   FullSandboxInfo,
+  ExposureInfo,
+  ExposureStatus,
+  ExposureVisibility,
   ProcessInfo,
   PtyInfo,
   WriteEntry,
@@ -37,7 +41,9 @@ export type {
   StreamEvent,
   RunCommandOptions,
   CreateSandboxOptions,
+  CreateExposureOptions,
   ListSandboxOptions,
+  RefreshExposureOptions,
   ContextInfo,
   ResultItem,
   LogOutput,
