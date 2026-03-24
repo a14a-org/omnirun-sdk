@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+### Minor Changes
+
+- 9d4a061: Add automatic retry on transient server errors (500/502/503) for POST and upload requests, fixing intermittent binary file write failures. Add Exposures API for managing sandbox preview URLs. Fix E2EE test compatibility with Node 18.
+
 All notable changes to this project will be documented in this file.
 
 ## 0.3.0 - 2026-03-04
