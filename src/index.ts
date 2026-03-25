@@ -8,6 +8,16 @@ export { Contexts } from "./contexts.js";
 export { Exposures } from "./exposures.js";
 export { Production } from "./production.js";
 export { Webhooks } from "./webhooks.js";
+export { LLM } from "./llm.js";
+export type {
+  ChatMessage,
+  ChatCompletionRequest,
+  ChatCompletionResponse,
+  ChatCompletionChoice,
+  ChatCompletionUsage,
+  LLMUsage,
+  LLMModel,
+} from "./llm.js";
 export { WatchHandle } from "./watch-handle.js";
 export { HTTPClient } from "./client.js";
 export {
