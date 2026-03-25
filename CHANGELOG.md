@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+### Minor Changes
+
+- a42b442: Add LLM proxy client with streaming support. New `LLM` class provides `chatCompletion()`, `streamChatCompletion()`, `listModels()`, and `getUsage()` methods for the OpenAI-compatible LLM proxy endpoint.
+
 ## 0.4.0
 
 ### Minor Changes
