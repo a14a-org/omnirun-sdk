@@ -79,23 +79,41 @@ export type ExposureStatus =
   | "sandbox_stopped"
   | "error";
 
+/** Detailed information about a sandbox port exposure (preview URL). */
 export interface ExposureInfo {
+  /** Unique exposure identifier. */
   id: string;
+  /** ID of the parent sandbox. */
   sandboxId: string;
+  /** Account that owns the exposure. */
   accountId?: string;
+  /** Sandbox-internal port being exposed. */
   port: number;
+  /** Hostname of the exposure proxy. */
   hostname: string;
+  /** Full public URL for the exposure. */
   url: string;
+  /** URL with embedded access token for private exposures. */
   accessUrl?: string;
+  /** Visibility level: `"public"` or `"private"`. */
   visibility: ExposureVisibility;
+  /** Current lifecycle status of the exposure. */
   status: ExposureStatus;
+  /** ISO-8601 timestamp when the exposure was created. */
   createdAt: string;
+  /** ISO-8601 timestamp when the exposure will expire. */
   expiresAt: string;
+  /** ISO-8601 timestamp when the exposure was revoked, if applicable. */
   revokedAt?: string;
+  /** ISO-8601 timestamp when the parent sandbox stopped, if applicable. */
   sandboxStoppedAt?: string;
+  /** ISO-8601 timestamp of the last proxied request. */
   lastAccessedAt?: string;
+  /** Default path appended to the URL when opened in a browser. */
   openPath?: string;
+  /** Whether the original `Host` header is preserved when proxying. */
   preserveHost: boolean;
+  /** Identifier of the user or API key that created the exposure. */
   createdBy?: string;
 }
 
@@ -122,19 +140,35 @@ export interface RunCommandOptions {
 }
 
 export interface CreateSandboxOptions {
+  /** Sandbox timeout in seconds. Default varies by template (typically 300). Use `0` for a permanent sandbox. */
   timeout?: number;
+  /** OmniRun API key. Falls back to `OMNIRUN_API_KEY` environment variable. */
   apiKey?: string;
+  /** OmniRun API base URL. Falls back to `OMNIRUN_API_URL` environment variable. */
   apiUrl?: string;
+  /** HTTP request timeout in milliseconds for SDK-to-API calls. */
   requestTimeout?: number;
+  /** Enable outbound internet access from the sandbox. Default: `false`. */
   internet?: boolean;
+  /** Memory allocation in MB. Overrides the template default when set. */
+  memory?: number;
+  /** Environment variables injected into the sandbox at creation time. */
   envVars?: Record<string, string>;
+  /** Arbitrary key-value metadata attached to the sandbox. Queryable via `list()`. */
   metadata?: Record<string, string>;
+  /** Heartbeat interval in seconds. The SDK sends periodic `setTimeout` calls to prevent auto-kill. */
   keepAlive?: number;
+  /** Auto-pause the sandbox after a period of inactivity instead of killing it. */
   autoPause?: boolean;
+  /** Network policy controlling allowed/denied domains and IPs for outbound traffic. */
   network?: NetworkPolicy;
+  /** Enable E2E encrypted mode for the sandbox. */
   secure?: boolean;
+  /** Mask the request `Host` header seen inside the sandbox with this value. */
   maskRequestHost?: string;
-  /** Client-side E2EE bootstrap options (key generation + public key announcement). */
+  /** Inject vault credentials into the sandbox as environment variables via `/tmp/.omnirun-env`. */
+  vaultInject?: boolean;
+  /** Client-side E2EE bootstrap options (key generation + public key announcement). Pass `true` for defaults. */
   e2ee?: boolean | E2EECreateOptions;
 }
 
@@ -181,20 +215,33 @@ export interface ExecutionResult {
 
 // Production types
 
+/** Aggregated usage metrics for a sandbox. */
 export interface SandboxMetrics {
+  /** Total CPU time consumed in milliseconds. */
   cpuTimeMs: number;
+  /** Current memory usage in megabytes. */
   memoryUsedMb: number;
+  /** Current disk usage in megabytes. */
   diskUsedMb: number;
+  /** Network bytes received in kilobytes. */
   networkRxKb: number;
+  /** Network bytes transmitted in kilobytes. */
   networkTxKb: number;
+  /** Number of commands executed in the sandbox. */
   commandCount: number;
+  /** Human-readable uptime string or ISO-8601 timestamp. */
   uptime: string;
 }
 
+/** Network policy controlling outbound traffic from a sandbox. */
 export interface NetworkPolicy {
+  /** Domains the sandbox is allowed to reach. If set, only these domains are permitted. */
   allowDomains?: string[];
+  /** Domains the sandbox is explicitly blocked from reaching. */
   denyDomains?: string[];
+  /** IP addresses or CIDR ranges the sandbox is allowed to reach. */
   allowIPs?: string[];
+  /** IP addresses or CIDR ranges the sandbox is explicitly blocked from reaching. */
   denyIPs?: string[];
 }
 
@@ -212,12 +259,20 @@ export interface CodeResult {
   exitCode: number;
 }
 
+/** A single point-in-time metrics snapshot from the sandbox time-series. */
 export interface MetricsSnapshot {
+  /** ISO-8601 timestamp of the snapshot. */
   timestamp: string;
+  /** CPU utilization as a percentage (0-100). */
   cpuUsedPct: number;
+  /** Number of virtual CPUs allocated to the sandbox. */
   cpuCount: number;
+  /** Memory currently used in bytes. */
   memUsed: number;
+  /** Total memory available in bytes. */
   memTotal: number;
+  /** Disk space currently used in bytes. */
   diskUsed: number;
+  /** Total disk space available in bytes. */
   diskTotal: number;
 }

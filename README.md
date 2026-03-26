@@ -77,6 +77,38 @@ const metrics = await sbx.production.metrics();
 const snapshots = await sbx.production.metricsSnapshots();
 ```
 
+## LLM proxy
+
+OpenAI-compatible LLM proxy with per-user spend tracking.
+
+```ts
+import { LLM } from "@omnirun/sdk";
+
+const llm = new LLM({ apiKey: process.env.OMNIRUN_API_KEY });
+
+// Chat completion
+const response = await llm.chatCompletion({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Hello!" }],
+});
+console.log(response.choices[0].message.content);
+
+// Streaming
+for await (const chunk of llm.streamChatCompletion({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Tell me a joke" }],
+})) {
+  process.stdout.write(chunk);
+}
+
+// List available models
+const models = await llm.listModels();
+
+// Check spend / remaining credits
+const usage = await llm.getUsage();
+console.log(`Remaining: ${usage.remainingCents / 100} USD`);
+```
+
 ## Integration tests
 
 Integration tests are opt-in:
@@ -126,3 +158,4 @@ Protocol scaffold details: `docs/E2EE-PROTOCOL-SCAFFOLD.md`.
 - `Contexts`
 - `Production`
 - `Webhooks`
+- `LLM`

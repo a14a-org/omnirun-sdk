@@ -21,7 +21,7 @@ import type {
   NetworkPolicy,
   SandboxInfo,
 } from "./models.js";
-import { Production } from "./production.js";
+import { parseMetricsSnapshot, Production } from "./production.js";
 import { Pty } from "./pty.js";
 import { makeCommandResult } from "./utils.js";
 import { Webhooks } from "./webhooks.js";
@@ -143,6 +143,27 @@ export class Sandbox {
     this.webhooks = new Webhooks(client);
   }
 
+  /**
+   * Create a new sandbox from a template.
+   *
+   * @param template - Template identifier (e.g. `"python-3.11"`, `"node-20"`). Defaults to `"python-3.11"`.
+   * @param opts - Creation options.
+   * @param opts.timeout - Sandbox timeout in seconds. Default `300`. Use `0` for a permanent sandbox.
+   * @param opts.apiKey - API key. Falls back to `OMNIRUN_API_KEY` env var.
+   * @param opts.apiUrl - API base URL. Falls back to `OMNIRUN_API_URL` env var.
+   * @param opts.internet - Enable outbound internet access.
+   * @param opts.envVars - Environment variables injected into the sandbox.
+   * @param opts.metadata - Arbitrary key-value metadata attached to the sandbox.
+   * @param opts.secure - Enable E2E encrypted mode.
+   * @param opts.maskRequestHost - Mask the request host header.
+   * @param opts.autoPause - Auto-pause the sandbox after inactivity.
+   * @param opts.keepAlive - Heartbeat interval in seconds to prevent auto-kill.
+   * @param opts.network - Network policy (allow/deny domains and IPs).
+   * @param opts.e2ee - E2EE bootstrap options or `true` for defaults.
+   * @param opts.vaultInject - Inject vault credentials as env vars via `/tmp/.omnirun-env`.
+   * @param opts.requestTimeout - HTTP request timeout in milliseconds.
+   * @returns A connected {@link Sandbox} instance.
+   */
   static async create(
     template = "python-3.11",
     opts?: CreateSandboxOptions
@@ -175,6 +196,7 @@ export class Sandbox {
     if (opts?.network) body.network = opts.network;
     if (opts?.secure) body.secure = true;
     if (opts?.maskRequestHost) body.maskRequestHost = opts.maskRequestHost;
+    if (opts?.vaultInject) body.vaultInject = true;
 
     const data = await client.post<{
       sandboxID: string;
@@ -208,6 +230,17 @@ export class Sandbox {
     return sandbox;
   }
 
+  /**
+   * Connect to an existing, already-running sandbox by its ID.
+   *
+   * Use this instead of {@link create} when you already have a sandbox ID
+   * (e.g. from a previous session, webhook payload, or database record).
+   *
+   * @param sandboxId - The unique sandbox identifier.
+   * @param opts - Connection options (apiKey, apiUrl, requestTimeout).
+   * @returns A connected {@link Sandbox} instance.
+   * @throws {SandboxNotFoundError} If the sandbox does not exist or has been killed.
+   */
   static async connect(
     sandboxId: string,
     opts?: { apiKey?: string; apiUrl?: string; requestTimeout?: number }
@@ -218,6 +251,12 @@ export class Sandbox {
     return new Sandbox(sandboxId, client);
   }
 
+  /**
+   * List sandboxes for the authenticated account.
+   *
+   * @param opts - Filter and pagination options (limit, nextToken, state, metadata).
+   * @returns An array of {@link SandboxInfo} objects.
+   */
   static async list(opts?: ListSandboxOptions): Promise<SandboxInfo[]> {
     const config = resolveConfig(opts);
     const client = new HTTPClient(config);
@@ -237,10 +276,24 @@ export class Sandbox {
     return sandboxes.map(parseSandboxInfo);
   }
 
+  /**
+   * Return a cursor-based paginator for listing sandboxes.
+   *
+   * Call {@link SandboxPaginator.nextItems} repeatedly until
+   * {@link SandboxPaginator.hasNext} is `false` to iterate through all pages.
+   *
+   * @param opts - Filter and pagination options.
+   * @returns A {@link SandboxPaginator} instance.
+   */
   static paginate(opts?: ListSandboxOptions): SandboxPaginator {
     return new SandboxPaginator(opts);
   }
 
+  /**
+   * Permanently destroy the sandbox. This is irreversible — the sandbox
+   * cannot be resumed or reconnected after being killed.
+   * Also clears any active keep-alive heartbeat.
+   */
   async kill(): Promise<void> {
     if (this.keepAliveInterval) {
       clearInterval(this.keepAliveInterval);
@@ -249,10 +302,22 @@ export class Sandbox {
     await this.client.delete(`/sandboxes/${this.sandboxId}`);
   }
 
+  /**
+   * Reset the sandbox auto-kill timer.
+   *
+   * @param timeout - New timeout value in seconds. The sandbox will be killed
+   *   after this many seconds of wall-clock time unless the timer is reset again.
+   */
   async setTimeout(timeout: number): Promise<void> {
     await this.client.post(`/sandboxes/${this.sandboxId}/timeout`, { timeout });
   }
 
+  /**
+   * Check whether the sandbox is currently in the `"running"` state.
+   *
+   * Makes a GET request to the sandbox info endpoint. Returns `false` if the
+   * sandbox does not exist, has been killed, or is in any non-running state.
+   */
   async isRunning(): Promise<boolean> {
     try {
       const data = await this.client.get<{ state: string }>(
@@ -264,6 +329,12 @@ export class Sandbox {
     }
   }
 
+  /**
+   * Retrieve detailed information about the sandbox.
+   *
+   * @returns A {@link FullSandboxInfo} object containing state, CPU count,
+   *   memory, template ID, and timestamps.
+   */
   async getInfo(): Promise<FullSandboxInfo> {
     const data = await this.client.get<any>(`/sandboxes/${this.sandboxId}`);
     return parseFullSandboxInfo(data);
@@ -316,10 +387,19 @@ export class Sandbox {
 
   // Convenience wrappers delegating to production namespace (e2b compat)
 
+  /**
+   * Pause the sandbox VM. A paused sandbox retains its state on disk and can
+   * be resumed later with {@link resume}. Use this for production sandboxes
+   * that need to survive periods of inactivity without being killed.
+   */
   async pause(): Promise<{ status: string }> {
     return this.production.pause();
   }
 
+  /**
+   * Resume a previously paused sandbox. The VM is restored from its
+   * saved state and continues running where it left off.
+   */
   async resume(): Promise<{ status: string }> {
     return this.production.resume();
   }
@@ -327,15 +407,7 @@ export class Sandbox {
   async getMetrics(): Promise<MetricsSnapshot[]> {
     const data = await this.client.get<any>(`/sandboxes/${this.sandboxId}/metrics`);
     if (Array.isArray(data)) {
-      return data.map((m: any) => ({
-        timestamp: m.timestamp ?? "",
-        cpuUsedPct: m.cpu_used_pct ?? 0,
-        cpuCount: m.cpu_count ?? 0,
-        memUsed: m.mem_used ?? 0,
-        memTotal: m.mem_total ?? 0,
-        diskUsed: m.disk_used ?? 0,
-        diskTotal: m.disk_total ?? 0,
-      }));
+      return data.map(parseMetricsSnapshot);
     }
     return [];
   }

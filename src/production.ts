@@ -1,6 +1,19 @@
 import type { HTTPClient } from "./client.js";
 import type { MetricsSnapshot, NetworkPolicy, SandboxMetrics } from "./models.js";
 
+/** Map a raw metrics snapshot from the API (snake_case) to a {@link MetricsSnapshot}. */
+export function parseMetricsSnapshot(m: any): MetricsSnapshot {
+  return {
+    timestamp: m.timestamp ?? "",
+    cpuUsedPct: m.cpu_used_pct ?? 0,
+    cpuCount: m.cpu_count ?? 0,
+    memUsed: m.mem_used ?? 0,
+    memTotal: m.mem_total ?? 0,
+    diskUsed: m.disk_used ?? 0,
+    diskTotal: m.disk_total ?? 0,
+  };
+}
+
 /** Production controls for pause/resume/metrics/network policy. */
 export class Production {
   private sandboxId: string;
@@ -58,16 +71,7 @@ export class Production {
   async metricsSnapshots(): Promise<MetricsSnapshot[]> {
     const data = await this.client.get<any>(`${this.baseUrl}/metrics`);
     if (!Array.isArray(data)) return [];
-
-    return data.map((m: any) => ({
-      timestamp: m.timestamp ?? "",
-      cpuUsedPct: m.cpu_used_pct ?? 0,
-      cpuCount: m.cpu_count ?? 0,
-      memUsed: m.mem_used ?? 0,
-      memTotal: m.mem_total ?? 0,
-      diskUsed: m.disk_used ?? 0,
-      diskTotal: m.disk_total ?? 0,
-    }));
+    return data.map(parseMetricsSnapshot);
   }
 
   /** Set network policy for the sandbox. */

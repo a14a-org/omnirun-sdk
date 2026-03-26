@@ -8,6 +8,19 @@ import type {
 } from "./models.js";
 import { makeCommandResult } from "./utils.js";
 
+function parseProcessInfo(p: any): ProcessInfo {
+  return {
+    pid: p.pid ?? 0,
+    command: p.command ?? "",
+    running: p.running ?? false,
+    exitCode: p.exit_code ?? p.exitCode ?? 0,
+    stdout: p.stdout,
+    stderr: p.stderr,
+    startedAt: p.started_at ?? p.startedAt,
+    endedAt: p.ended_at ?? p.endedAt,
+  };
+}
+
 /** Command execution namespace for a single sandbox. */
 export class Commands {
   private sandboxId: string;
@@ -82,11 +95,14 @@ export class Commands {
   }
 
   async list(): Promise<ProcessInfo[]> {
-    return this.client.get<ProcessInfo[]>(this.baseUrl);
+    const data = await this.client.get<any[]>(this.baseUrl);
+    const items = Array.isArray(data) ? data : [];
+    return items.map(parseProcessInfo);
   }
 
   async get(pid: number): Promise<ProcessInfo> {
-    return this.client.get<ProcessInfo>(`${this.baseUrl}/${pid}`);
+    const data = await this.client.get<any>(`${this.baseUrl}/${pid}`);
+    return parseProcessInfo(data);
   }
 
   async kill(pid: number): Promise<void> {
