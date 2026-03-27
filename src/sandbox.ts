@@ -30,8 +30,7 @@ function encodeMetadataFilter(metadata?: Record<string, string>): string | undef
   if (!metadata) return undefined;
   const entries = Object.entries(metadata);
   if (entries.length === 0) return undefined;
-  const [key, value] = entries[0];
-  return `${key}:${value}`;
+  return entries.map(([key, value]) => `${key}:${value}`).join(",");
 }
 
 function parseSandboxInfo(s: any): SandboxInfo {
@@ -129,11 +128,15 @@ export class Sandbox {
   e2ee: E2EESessionInfo | null = null;
   trafficAccessToken: string = "";
   private client: HTTPClient;
+  private previewDomain: string;
   private keepAliveInterval: ReturnType<typeof setInterval> | null = null;
 
-  private constructor(sandboxId: string, client: HTTPClient) {
+  private constructor(sandboxId: string, client: HTTPClient, previewDomain?: string) {
     this.sandboxId = sandboxId;
     this.client = client;
+    this.previewDomain = previewDomain
+      || (typeof process !== "undefined" ? process.env.OMNIRUN_PREVIEW_DOMAIN : undefined)
+      || "claudebox.io";
     this.commands = new Commands(sandboxId, client);
     this.files = new Filesystem(sandboxId, client);
     this.pty = new Pty(sandboxId, client);
@@ -204,7 +207,7 @@ export class Sandbox {
       serverPublicKey?: string;
       e2ee?: { serverPublicKey?: string };
     }>("/sandboxes", body);
-    const sandbox = new Sandbox(data.sandboxID, client);
+    const sandbox = new Sandbox(data.sandboxID, client, opts?.previewDomain);
     sandbox.trafficAccessToken = data.trafficToken ?? "";
     if (e2eeOpts?.enabled && clientPublicKey) {
       sandbox.e2ee = {
@@ -243,12 +246,12 @@ export class Sandbox {
    */
   static async connect(
     sandboxId: string,
-    opts?: { apiKey?: string; apiUrl?: string; requestTimeout?: number }
+    opts?: { apiKey?: string; apiUrl?: string; requestTimeout?: number; previewDomain?: string }
   ): Promise<Sandbox> {
     const config = resolveConfig(opts);
     const client = new HTTPClient(config);
     await client.get(`/sandboxes/${sandboxId}`);
-    return new Sandbox(sandboxId, client);
+    return new Sandbox(sandboxId, client, opts?.previewDomain);
   }
 
   /**
@@ -351,7 +354,7 @@ export class Sandbox {
 
   /** Get public URL for a port exposed inside the sandbox. */
   getHost(port: number): string {
-    return `https://${this.sandboxId}-${port}.claudebox.io`;
+    return `https://${this.sandboxId}-${port}.${this.previewDomain}`;
   }
 
   /** Create a managed preview URL for a sandbox port. */

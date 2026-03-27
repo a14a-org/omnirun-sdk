@@ -170,6 +170,8 @@ export interface CreateSandboxOptions {
   vaultInject?: boolean;
   /** Client-side E2EE bootstrap options (key generation + public key announcement). Pass `true` for defaults. */
   e2ee?: boolean | E2EECreateOptions;
+  /** Domain used for sandbox preview URLs (e.g. `"omnirun-preview.dev"`). Falls back to `OMNIRUN_PREVIEW_DOMAIN` env var, then `"claudebox.io"`. */
+  previewDomain?: string;
 }
 
 export interface ListSandboxOptions {
