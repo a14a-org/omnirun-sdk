@@ -9,6 +9,7 @@ import {
   type E2EESessionInfo,
 } from "./e2ee.js";
 import { Filesystem } from "./filesystem.js";
+import { Desktop } from "./desktop.js";
 import { Exposures } from "./exposures.js";
 import type {
   CodeResult,
@@ -122,6 +123,7 @@ export class Sandbox {
   readonly files: Filesystem;
   readonly pty: Pty;
   readonly contexts: Contexts;
+  readonly desktop: Desktop;
   readonly exposures: Exposures;
   readonly production: Production;
   readonly webhooks: Webhooks;
@@ -141,6 +143,7 @@ export class Sandbox {
     this.files = new Filesystem(sandboxId, client);
     this.pty = new Pty(sandboxId, client);
     this.contexts = new Contexts(sandboxId, client);
+    this.desktop = new Desktop(sandboxId, client);
     this.exposures = new Exposures(sandboxId, client);
     this.production = new Production(sandboxId, client);
     this.webhooks = new Webhooks(client);

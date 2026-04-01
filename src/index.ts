@@ -5,6 +5,16 @@ export { CommandHandle } from "./command-handle.js";
 export { Filesystem } from "./filesystem.js";
 export { Pty, PtySession } from "./pty.js";
 export { Contexts } from "./contexts.js";
+export { Desktop } from "./desktop.js";
+export type {
+  ScreenInfo,
+  DesktopStreamInfo,
+  MouseOptions,
+  KeyboardOptions,
+  MouseAction,
+  ScrollDirection,
+  KeyboardAction,
+} from "./desktop.js";
 export { Exposures } from "./exposures.js";
 export { Production } from "./production.js";
 export { Webhooks } from "./webhooks.js";
