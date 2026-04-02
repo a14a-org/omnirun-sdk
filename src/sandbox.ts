@@ -190,6 +190,10 @@ export class Sandbox {
     let clientPublicKey: string | undefined;
 
     if (e2eeOpts?.enabled) {
+      console.warn(
+        "[omnirun] e2ee: key exchange only — payload encryption is not yet implemented. " +
+        "Command and file data is transmitted in plaintext over TLS.",
+      );
       e2eeKeyPair = e2eeOpts.keyPair ?? (await generateE2EEKeyPair());
       clientPublicKey = e2eeOpts.clientPublicKey ?? e2eeKeyPair.publicKeyBase64;
       body.e2ee = true;

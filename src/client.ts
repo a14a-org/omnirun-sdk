@@ -16,6 +16,15 @@ export class HTTPClient {
 
   constructor(config: ConnectionConfig) {
     this.config = config;
+    if (
+      config.apiUrl.startsWith("http://") &&
+      !config.apiUrl.includes("localhost") &&
+      !config.apiUrl.includes("127.0.0.1")
+    ) {
+      console.warn(
+        "[omnirun] WARNING: API URL uses unencrypted HTTP. API keys will be sent in plaintext. Use HTTPS for production.",
+      );
+    }
   }
 
   get baseUrl(): string {
