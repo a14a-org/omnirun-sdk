@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+### Minor Changes
+
+- Add Desktop class for GUI sandbox control (screenshot, mouse, keyboard, screen). Implement full E2EE payload encryption with AES-256-GCM. Add HTTP transport security warnings.
+
 ## 0.5.0
 
 ### Minor Changes
