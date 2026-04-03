@@ -1,4 +1,5 @@
 import type { ConnectionConfig } from "./config.js";
+import { encryptE2EEJSON, decryptE2EEJSON, type EncryptedEnvelope } from "./e2ee.js";
 import { SandboxError, StreamError } from "./errors.js";
 import type { StreamEvent } from "./models.js";
 
@@ -13,6 +14,7 @@ function isRetryable(status: number): boolean {
 /** Low-level HTTP transport for OmniRun API requests. */
 export class HTTPClient {
   private config: ConnectionConfig;
+  private e2eeKey: CryptoKey | null = null;
 
   constructor(config: ConnectionConfig) {
     this.config = config;
@@ -25,6 +27,10 @@ export class HTTPClient {
         "[omnirun] WARNING: API URL uses unencrypted HTTP. API keys will be sent in plaintext. Use HTTPS for production.",
       );
     }
+  }
+
+  setE2EEKey(key: CryptoKey): void {
+    this.e2eeKey = key;
   }
 
   get baseUrl(): string {
@@ -50,11 +56,16 @@ export class HTTPClient {
       headers: this.authHeaders,
       signal: AbortSignal.timeout(this.config.requestTimeout),
     });
-    return this.handle<T>(resp);
+    return this.handleWithDecrypt<T>(resp);
   }
 
   async post<T = any>(path: string, body?: any): Promise<T> {
-    const jsonBody = body != null ? JSON.stringify(body) : undefined;
+    let actualBody = body;
+    if (this.e2eeKey && body != null) {
+      const envelope = await encryptE2EEJSON(this.e2eeKey, body);
+      actualBody = { _encrypted: envelope };
+    }
+    const jsonBody = actualBody != null ? JSON.stringify(actualBody) : undefined;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       const resp = await fetch(this.buildUrl(path), {
@@ -70,7 +81,7 @@ export class HTTPClient {
         continue;
       }
 
-      return this.handle<T>(resp);
+      return this.handleWithDecrypt<T>(resp);
     }
 
     // Unreachable, but TypeScript needs it
@@ -235,6 +246,14 @@ export class HTTPClient {
     }
 
     return (await resp.text()) as T;
+  }
+
+  private async handleWithDecrypt<T>(resp: Response): Promise<T> {
+    const data = await this.handle<T>(resp);
+    if (this.e2eeKey && data && typeof data === "object" && "_encrypted" in data) {
+      return decryptE2EEJSON<T>(this.e2eeKey, (data as any)._encrypted);
+    }
+    return data;
   }
 
   private async *parseSSE(resp: Response): AsyncGenerator<StreamEvent> {
