@@ -40,7 +40,7 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=18"
+    "node": ">=18.20.8"
   },
   "publishConfig": {
     "access": "public",
@@ -55,8 +55,8 @@
   },
   "homepage": "https://github.com/a14a-org/omnirun-sdk#readme",
   "devDependencies": {
-    "@changesets/cli": "^2.29.7",
-    "@types/node": "^24.0.0",
+    "@changesets/cli": "^2.31.0",
+    "@types/node": "^24.12.4",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }
