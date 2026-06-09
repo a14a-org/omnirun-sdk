@@ -56,7 +56,7 @@
   "homepage": "https://github.com/a14a-org/omnirun-sdk#readme",
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
-    "@types/node": "^24.13.0",
+    "@types/node": "^24.13.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   }
