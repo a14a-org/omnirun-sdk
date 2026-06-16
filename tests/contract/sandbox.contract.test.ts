@@ -6,6 +6,45 @@ describe("Sandbox contract", () => {
     vi.restoreAllMocks();
   });
 
+  it("includes memory as memoryMB in the create payload", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ sandboxID: "sbx_mem_1" }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await Sandbox.create("python-3.11", {
+      apiUrl: "https://api.omnirun.io",
+      apiKey: "test-key",
+      memory: 2048,
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const payload = JSON.parse(String(init.body));
+    expect(payload.memoryMB).toBe(2048);
+  });
+
+  it("omits memoryMB from the create payload when memory is not set", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ sandboxID: "sbx_mem_2" }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await Sandbox.create("python-3.11", {
+      apiUrl: "https://api.omnirun.io",
+      apiKey: "test-key",
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const payload = JSON.parse(String(init.body));
+    expect(payload).not.toHaveProperty("memoryMB");
+  });
+
   it("encodes metadata filter as metadata=key:value", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify([]), {

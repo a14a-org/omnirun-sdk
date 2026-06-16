@@ -197,6 +197,7 @@ export class Sandbox {
       body.clientPublicKey = clientPublicKey;
     }
     if (opts?.internet) body.internet = true;
+    if (opts?.memory != null) body.memoryMB = opts.memory;
     if (opts?.envVars) body.envVars = opts.envVars;
     if (opts?.metadata) body.metadata = opts.metadata;
     if (opts?.autoPause) body.autoPause = true;
