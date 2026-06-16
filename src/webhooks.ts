@@ -9,9 +9,18 @@ export class Webhooks {
     this.client = client;
   }
 
-  /** Register a new lifecycle webhook. */
-  async register(url: string, events: string[]): Promise<{ id: string }> {
+  /** Create a new lifecycle webhook. */
+  async create(url: string, events: string[]): Promise<{ id: string }> {
     return this.client.post<{ id: string }>("/webhooks", { url, events });
+  }
+
+  /**
+   * Register a new lifecycle webhook.
+   *
+   * @deprecated Use {@link create} instead. Retained as an alias for backwards compatibility.
+   */
+  async register(url: string, events: string[]): Promise<{ id: string }> {
+    return this.create(url, events);
   }
 
   /** List all registered webhooks. */

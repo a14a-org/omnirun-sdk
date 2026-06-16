@@ -1,13 +1,17 @@
 export class SandboxError extends Error {
-  constructor(message: string) {
+  /** HTTP status code that produced this error, if applicable. */
+  status?: number;
+
+  constructor(message: string, status?: number) {
     super(message);
     this.name = "SandboxError";
+    this.status = status;
   }
 }
 
 export class SandboxNotFoundError extends SandboxError {
   constructor(sandboxId: string) {
-    super(`Sandbox ${sandboxId} not found`);
+    super(`Sandbox ${sandboxId} not found`, 404);
     this.name = "SandboxNotFoundError";
   }
 }

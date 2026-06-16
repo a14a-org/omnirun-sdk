@@ -75,7 +75,7 @@ OMNIRUN_STRICT_NETWORK_POLICY_CHECK=1
 To also validate traffic-token gate behavior on your port-proxy domain, set:
 
 ```bash
-OMNIRUN_SECURE_PROXY_URL_TEMPLATE=https://${SANDBOX_ID}-${PORT}.claudebox.io/secure-proxy.txt
+OMNIRUN_SECURE_PROXY_URL_TEMPLATE=https://${SANDBOX_ID}-${PORT}.omnirun-preview.dev/secure-proxy.txt
 ```
 
 To make that check strict/failing when proxy behavior is unexpected:

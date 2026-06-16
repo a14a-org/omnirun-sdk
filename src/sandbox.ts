@@ -11,6 +11,7 @@ import {
 } from "./e2ee.js";
 import { Filesystem } from "./filesystem.js";
 import { Desktop } from "./desktop.js";
+import { SandboxError, SandboxNotFoundError } from "./errors.js";
 import { Exposures } from "./exposures.js";
 import type {
   CodeResult,
@@ -27,6 +28,20 @@ import { parseMetricsSnapshot, Production } from "./production.js";
 import { Pty } from "./pty.js";
 import { makeCommandResult } from "./utils.js";
 import { Webhooks } from "./webhooks.js";
+
+/** Default domain for sandbox preview URLs when none is configured. */
+const DEFAULT_PREVIEW_DOMAIN = "omnirun-preview.dev";
+
+/**
+ * Rethrow a 404 {@link SandboxError} as a {@link SandboxNotFoundError} so callers
+ * can distinguish a missing/killed sandbox from other API failures.
+ */
+function rethrowNotFound(err: unknown, sandboxId: string): never {
+  if (err instanceof SandboxError && err.status === 404) {
+    throw new SandboxNotFoundError(sandboxId);
+  }
+  throw err;
+}
 
 function encodeMetadataFilter(metadata?: Record<string, string>): string | undefined {
   if (!metadata) return undefined;
@@ -139,7 +154,7 @@ export class Sandbox {
     this.client = client;
     this.previewDomain = previewDomain
       || (typeof process !== "undefined" ? process.env.OMNIRUN_PREVIEW_DOMAIN : undefined)
-      || "claudebox.io";
+      || DEFAULT_PREVIEW_DOMAIN;
     this.commands = new Commands(sandboxId, client);
     this.files = new Filesystem(sandboxId, client);
     this.pty = new Pty(sandboxId, client);
@@ -197,6 +212,7 @@ export class Sandbox {
       body.clientPublicKey = clientPublicKey;
     }
     if (opts?.internet) body.internet = true;
+    if (opts?.memory != null) body.memoryMB = opts.memory;
     if (opts?.envVars) body.envVars = opts.envVars;
     if (opts?.metadata) body.metadata = opts.metadata;
     if (opts?.autoPause) body.autoPause = true;
@@ -262,7 +278,11 @@ export class Sandbox {
   ): Promise<Sandbox> {
     const config = resolveConfig(opts);
     const client = new HTTPClient(config);
-    await client.get(`/sandboxes/${sandboxId}`);
+    try {
+      await client.get(`/sandboxes/${sandboxId}`);
+    } catch (err) {
+      rethrowNotFound(err, sandboxId);
+    }
     return new Sandbox(sandboxId, client, opts?.previewDomain);
   }
 
@@ -351,7 +371,12 @@ export class Sandbox {
    *   memory, template ID, and timestamps.
    */
   async getInfo(): Promise<FullSandboxInfo> {
-    const data = await this.client.get<any>(`/sandboxes/${this.sandboxId}`);
+    let data: any;
+    try {
+      data = await this.client.get<any>(`/sandboxes/${this.sandboxId}`);
+    } catch (err) {
+      rethrowNotFound(err, this.sandboxId);
+    }
     return parseFullSandboxInfo(data);
   }
 

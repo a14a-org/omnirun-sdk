@@ -150,7 +150,7 @@ export interface CreateSandboxOptions {
   requestTimeout?: number;
   /** Enable outbound internet access from the sandbox. Default: `false`. */
   internet?: boolean;
-  /** Memory allocation in MB. Overrides the template default when set. */
+  /** Memory allocation in MB. Requires backend support; currently ignored by the server (memory is derived from the template). */
   memory?: number;
   /** Environment variables injected into the sandbox at creation time. */
   envVars?: Record<string, string>;
@@ -170,7 +170,7 @@ export interface CreateSandboxOptions {
   vaultInject?: boolean;
   /** Client-side E2EE bootstrap options (key generation + public key announcement). Pass `true` for defaults. */
   e2ee?: boolean | E2EECreateOptions;
-  /** Domain used for sandbox preview URLs (e.g. `"omnirun-preview.dev"`). Falls back to `OMNIRUN_PREVIEW_DOMAIN` env var, then `"claudebox.io"`. */
+  /** Domain used for sandbox preview URLs (e.g. `"omnirun-preview.dev"`). Falls back to `OMNIRUN_PREVIEW_DOMAIN` env var, then `"omnirun-preview.dev"`. */
   previewDomain?: string;
 }
 
