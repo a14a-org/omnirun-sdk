@@ -49,7 +49,7 @@ describe("Route contracts", () => {
     expect(init.method).toBe("GET");
   });
 
-  it("uses expected webhooks endpoint", async () => {
+  it("uses expected webhooks endpoint via create()", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ id: "wh_1" }), {
         status: 201,
@@ -59,8 +59,31 @@ describe("Route contracts", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const webhooks = new Webhooks(new HTTPClient(config));
-    await webhooks.register("https://example.com/hook", ["created"]);
+    await webhooks.create("https://example.com/hook", ["created"]);
 
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(String(url)).toContain("/webhooks");
+    expect(init.method).toBe("POST");
+    const payload = JSON.parse(String(init.body));
+    expect(payload).toEqual({
+      url: "https://example.com/hook",
+      events: ["created"],
+    });
+  });
+
+  it("register() is a backwards-compatible alias for create()", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: "wh_2" }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const webhooks = new Webhooks(new HTTPClient(config));
+    const result = await webhooks.register("https://example.com/hook", ["created"]);
+
+    expect(result).toEqual({ id: "wh_2" });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(String(url)).toContain("/webhooks");
     expect(init.method).toBe("POST");
