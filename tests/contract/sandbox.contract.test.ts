@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SandboxNotFoundError } from "../../src/errors.js";
 import { Sandbox } from "../../src/sandbox.js";
 
 describe("Sandbox contract", () => {
@@ -87,6 +88,49 @@ describe("Sandbox contract", () => {
       if (prev === undefined) delete process.env.OMNIRUN_PREVIEW_DOMAIN;
       else process.env.OMNIRUN_PREVIEW_DOMAIN = prev;
     }
+  });
+
+  it("throws SandboxNotFoundError when connect gets a 404", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: "not found" }), {
+        status: 404,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      Sandbox.connect("sbx_missing", {
+        apiUrl: "https://api.omnirun.io",
+        apiKey: "test-key",
+      })
+    ).rejects.toBeInstanceOf(SandboxNotFoundError);
+  });
+
+  it("throws SandboxNotFoundError when getInfo gets a 404", async () => {
+    const okResponse = () =>
+      new Response(JSON.stringify({ sandboxID: "sbx_1", state: "running" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    const notFoundResponse = () =>
+      new Response(JSON.stringify({ error: "not found" }), {
+        status: 404,
+        headers: { "content-type": "application/json" },
+      });
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(okResponse()) // connect()
+      .mockResolvedValueOnce(notFoundResponse()); // getInfo()
+    vi.stubGlobal("fetch", fetchMock);
+
+    const sbx = await Sandbox.connect("sbx_1", {
+      apiUrl: "https://api.omnirun.io",
+      apiKey: "test-key",
+    });
+
+    await expect(sbx.getInfo()).rejects.toBeInstanceOf(SandboxNotFoundError);
   });
 
   it("encodes metadata filter as metadata=key:value", async () => {

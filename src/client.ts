@@ -120,7 +120,7 @@ export class HTTPClient {
       if (resp.status === 204) return;
       if (!resp.ok) {
         const text = await resp.text();
-        throw new SandboxError(`API error ${resp.status}: ${text}`);
+        throw new SandboxError(`API error ${resp.status}: ${text}`, resp.status);
       }
       return;
     }
@@ -273,7 +273,7 @@ export class HTTPClient {
   private async handle<T>(resp: Response): Promise<T> {
     if (!resp.ok) {
       const msg = await this.errorMessage(resp);
-      throw new SandboxError(`API error ${resp.status}: ${msg}`);
+      throw new SandboxError(`API error ${resp.status}: ${msg}`, resp.status);
     }
 
     if (resp.status === 204) {
