@@ -1,6 +1,9 @@
 # E2EE Protocol Scaffold (SDK + API)
 
-This document defines the initial protocol contract for end-to-end encrypted OmniRun workloads.
+This document defines the initial protocol contract for encrypted-transport OmniRun
+workloads. Today this provides encrypted transport to the sandbox (the worker
+decrypts to execute); the steps required to reach true end-to-end confidentiality
+are tracked in "Required backend follow-up" below.
 
 ## Current state
 
@@ -9,6 +12,13 @@ This document defines the initial protocol contract for end-to-end encrypted Omn
   - send `clientPublicKey` on sandbox create
   - expose encryption envelope helpers (`AES-256-GCM`)
 - Backend currently treats this as a bootstrap signal unless encrypted endpoints are implemented.
+
+> **Confidentiality scope:** payloads are encrypted in transit to the sandbox, but
+> the worker decrypts them in order to execute commands and code. Confidentiality
+> therefore terminates at the worker — this is encrypted transport, not
+> zero-knowledge end-to-end encryption. The operator running the sandbox can observe
+> decrypted payloads. The "Required backend follow-up" section below describes what
+> would be needed to move decryption fully inside the VM agent.
 
 ## Create handshake
 

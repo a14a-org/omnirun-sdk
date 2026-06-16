@@ -64,9 +64,15 @@ console.log(`${screen.width}x${screen.height}`);
 await sbx.kill();
 ```
 
-## End-to-End Encryption (E2EE)
+## Encrypted Transport to the Sandbox
 
-Bootstrap a client keypair and establish encrypted communication with the sandbox.
+Bootstrap a client keypair and encrypt payloads in transit to the sandbox.
+
+> **Confidentiality scope:** payloads are encrypted in transit and the worker
+> decrypts them in order to execute commands and code. Confidentiality therefore
+> terminates at the worker — this is encrypted transport, not zero-knowledge
+> end-to-end encryption. The operator running the sandbox can observe decrypted
+> payloads.
 
 ```ts
 const sbx = await Sandbox.create("python-3.11", {
