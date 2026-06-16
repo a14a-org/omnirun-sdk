@@ -11,7 +11,7 @@ export class SandboxError extends Error {
 
 export class SandboxNotFoundError extends SandboxError {
   constructor(sandboxId: string) {
-    super(`Sandbox ${sandboxId} not found`);
+    super(`Sandbox ${sandboxId} not found`, 404);
     this.name = "SandboxNotFoundError";
   }
 }

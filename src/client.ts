@@ -3,12 +3,12 @@ import { encryptE2EEJSON, decryptE2EEJSON, type EncryptedEnvelope } from "./e2ee
 import { SandboxError, StreamError } from "./errors.js";
 import type { StreamEvent } from "./models.js";
 
-/** Maximum number of retry attempts for retryable server errors. */
-const MAX_RETRIES = 2;
+/** Maximum number of total attempts for retryable server errors (1 retry). */
+const MAX_ATTEMPTS = 2;
 
 /** HTTP status codes that are safe to retry (transient server errors). */
 function isRetryable(status: number): boolean {
-  return status === 500 || status === 502 || status === 503;
+  return status === 500 || status === 502 || status === 503 || status === 504;
 }
 
 /** Low-level HTTP transport for OmniRun API requests. */
@@ -52,14 +52,14 @@ export class HTTPClient {
   async get<T = any>(path: string, params?: Record<string, string>): Promise<T> {
     const url = this.buildUrl(path, params);
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       const resp = await fetch(url, {
         method: "GET",
         headers: this.authHeaders,
         signal: AbortSignal.timeout(this.config.requestTimeout),
       });
 
-      if (isRetryable(resp.status) && attempt < MAX_RETRIES - 1) {
+      if (isRetryable(resp.status) && attempt < MAX_ATTEMPTS - 1) {
         // Drain response body before retrying
         await resp.text();
         continue;
@@ -80,7 +80,7 @@ export class HTTPClient {
     }
     const jsonBody = actualBody != null ? JSON.stringify(actualBody) : undefined;
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       const resp = await fetch(this.buildUrl(path), {
         method: "POST",
         headers: this.jsonHeaders,
@@ -88,7 +88,7 @@ export class HTTPClient {
         signal: AbortSignal.timeout(this.config.requestTimeout),
       });
 
-      if (isRetryable(resp.status) && attempt < MAX_RETRIES - 1) {
+      if (isRetryable(resp.status) && attempt < MAX_ATTEMPTS - 1) {
         // Drain response body before retrying
         await resp.text();
         continue;
@@ -104,14 +104,14 @@ export class HTTPClient {
   async delete(path: string, params?: Record<string, string>): Promise<void> {
     const url = this.buildUrl(path, params);
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       const resp = await fetch(url, {
         method: "DELETE",
         headers: this.authHeaders,
         signal: AbortSignal.timeout(this.config.requestTimeout),
       });
 
-      if (isRetryable(resp.status) && attempt < MAX_RETRIES - 1) {
+      if (isRetryable(resp.status) && attempt < MAX_ATTEMPTS - 1) {
         // Drain response body before retrying
         await resp.text();
         continue;
@@ -160,14 +160,14 @@ export class HTTPClient {
   async getWithHeaders<T = any>(path: string, params?: Record<string, string>): Promise<{ data: T; headers: Headers }> {
     const url = this.buildUrl(path, params);
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       const resp = await fetch(url, {
         method: "GET",
         headers: this.authHeaders,
         signal: AbortSignal.timeout(this.config.requestTimeout),
       });
 
-      if (isRetryable(resp.status) && attempt < MAX_RETRIES - 1) {
+      if (isRetryable(resp.status) && attempt < MAX_ATTEMPTS - 1) {
         // Drain response body before retrying
         await resp.text();
         continue;
@@ -187,7 +187,7 @@ export class HTTPClient {
       headers["X-API-Key"] = this.config.apiKey;
     }
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       // Rebuild FormData for each attempt since the body stream is consumed
       const form = new FormData();
       form.append("path", filePath);
@@ -200,7 +200,7 @@ export class HTTPClient {
         signal: AbortSignal.timeout(this.config.requestTimeout),
       });
 
-      if (isRetryable(resp.status) && attempt < MAX_RETRIES - 1) {
+      if (isRetryable(resp.status) && attempt < MAX_ATTEMPTS - 1) {
         await resp.text();
         continue;
       }

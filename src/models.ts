@@ -150,7 +150,7 @@ export interface CreateSandboxOptions {
   requestTimeout?: number;
   /** Enable outbound internet access from the sandbox. Default: `false`. */
   internet?: boolean;
-  /** Memory allocation in MB. Overrides the template default when set. */
+  /** Memory allocation in MB. Requires backend support; currently ignored by the server (memory is derived from the template). */
   memory?: number;
   /** Environment variables injected into the sandbox at creation time. */
   envVars?: Record<string, string>;
