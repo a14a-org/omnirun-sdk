@@ -28,6 +28,9 @@ import { Pty } from "./pty.js";
 import { makeCommandResult } from "./utils.js";
 import { Webhooks } from "./webhooks.js";
 
+/** Default domain for sandbox preview URLs when none is configured. */
+const DEFAULT_PREVIEW_DOMAIN = "omnirun-preview.dev";
+
 function encodeMetadataFilter(metadata?: Record<string, string>): string | undefined {
   if (!metadata) return undefined;
   const entries = Object.entries(metadata);
@@ -139,7 +142,7 @@ export class Sandbox {
     this.client = client;
     this.previewDomain = previewDomain
       || (typeof process !== "undefined" ? process.env.OMNIRUN_PREVIEW_DOMAIN : undefined)
-      || "claudebox.io";
+      || DEFAULT_PREVIEW_DOMAIN;
     this.commands = new Commands(sandboxId, client);
     this.files = new Filesystem(sandboxId, client);
     this.pty = new Pty(sandboxId, client);
