@@ -51,12 +51,25 @@ export class HTTPClient {
 
   async get<T = any>(path: string, params?: Record<string, string>): Promise<T> {
     const url = this.buildUrl(path, params);
-    const resp = await fetch(url, {
-      method: "GET",
-      headers: this.authHeaders,
-      signal: AbortSignal.timeout(this.config.requestTimeout),
-    });
-    return this.handleWithDecrypt<T>(resp);
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const resp = await fetch(url, {
+        method: "GET",
+        headers: this.authHeaders,
+        signal: AbortSignal.timeout(this.config.requestTimeout),
+      });
+
+      if (isRetryable(resp.status) && attempt < MAX_RETRIES - 1) {
+        // Drain response body before retrying
+        await resp.text();
+        continue;
+      }
+
+      return this.handleWithDecrypt<T>(resp);
+    }
+
+    // Unreachable, but TypeScript needs it
+    throw new SandboxError("max retries exceeded");
   }
 
   async post<T = any>(path: string, body?: any): Promise<T> {
@@ -90,16 +103,30 @@ export class HTTPClient {
 
   async delete(path: string, params?: Record<string, string>): Promise<void> {
     const url = this.buildUrl(path, params);
-    const resp = await fetch(url, {
-      method: "DELETE",
-      headers: this.authHeaders,
-      signal: AbortSignal.timeout(this.config.requestTimeout),
-    });
-    if (resp.status === 204) return;
-    if (!resp.ok) {
-      const text = await resp.text();
-      throw new SandboxError(`API error ${resp.status}: ${text}`);
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const resp = await fetch(url, {
+        method: "DELETE",
+        headers: this.authHeaders,
+        signal: AbortSignal.timeout(this.config.requestTimeout),
+      });
+
+      if (isRetryable(resp.status) && attempt < MAX_RETRIES - 1) {
+        // Drain response body before retrying
+        await resp.text();
+        continue;
+      }
+
+      if (resp.status === 204) return;
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new SandboxError(`API error ${resp.status}: ${text}`);
+      }
+      return;
     }
+
+    // Unreachable, but TypeScript needs it
+    throw new SandboxError("max retries exceeded");
   }
 
   async download(path: string, params?: Record<string, string>): Promise<Uint8Array> {
@@ -132,13 +159,26 @@ export class HTTPClient {
 
   async getWithHeaders<T = any>(path: string, params?: Record<string, string>): Promise<{ data: T; headers: Headers }> {
     const url = this.buildUrl(path, params);
-    const resp = await fetch(url, {
-      method: "GET",
-      headers: this.authHeaders,
-      signal: AbortSignal.timeout(this.config.requestTimeout),
-    });
-    const data = await this.handle<T>(resp);
-    return { data, headers: resp.headers };
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const resp = await fetch(url, {
+        method: "GET",
+        headers: this.authHeaders,
+        signal: AbortSignal.timeout(this.config.requestTimeout),
+      });
+
+      if (isRetryable(resp.status) && attempt < MAX_RETRIES - 1) {
+        // Drain response body before retrying
+        await resp.text();
+        continue;
+      }
+
+      const data = await this.handle<T>(resp);
+      return { data, headers: resp.headers };
+    }
+
+    // Unreachable, but TypeScript needs it
+    throw new SandboxError("max retries exceeded");
   }
 
   async upload(path: string, filePath: string, content: Uint8Array, filename: string): Promise<any> {
