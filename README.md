@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/@omnirun/sdk"><img src="https://img.shields.io/npm/v/@omnirun/sdk" alt="npm"></a>
   <a href="https://omnirun.io/docs"><img src="https://img.shields.io/badge/docs-omnirun.io-blue" alt="Documentation"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License"></a>
 </p>
 
 ---
@@ -189,6 +189,32 @@ The SDK resolves configuration in this order:
 2. Environment variables: `OMNIRUN_API_URL`, `OMNIRUN_API_KEY`
 3. Default API URL: `https://api.omnirun.io`
 
+## Self-hosting
+
+The OmniRun server is open source (Apache-2.0) at [github.com/a14a-org/omnirun](https://github.com/a14a-org/omnirun). To point the
+SDK at your own deployment instead of the hosted API, set the base URL and an
+API key issued by that deployment:
+
+```bash
+export OMNIRUN_API_URL=https://omnirun.example.internal
+export OMNIRUN_API_KEY=omr_...
+# Only if your deployment serves previews on its own domain:
+export OMNIRUN_PREVIEW_DOMAIN=preview.example.internal
+```
+
+or pass them explicitly:
+
+```ts
+const sbx = await Sandbox.create("python-3.11", {
+  apiUrl: "https://omnirun.example.internal",
+  apiKey: process.env.OMNIRUN_API_KEY,
+  previewDomain: "preview.example.internal",
+});
+```
+
+Use HTTPS for anything other than `localhost`; the SDK warns when an API key
+would be sent over plain HTTP.
+
 ## Related
 
 - [Python SDK](https://github.com/a14a-org/omnirun-sdk-python) -- `pip install omnirun`
@@ -198,4 +224,8 @@ The SDK resolves configuration in this order:
 
 ## License
 
-MIT
+[Apache License 2.0](./LICENSE). See [NOTICE](./NOTICE). Contributions require a DCO
+sign-off; see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+Versions published before the relicense remain available under their original
+MIT license.
