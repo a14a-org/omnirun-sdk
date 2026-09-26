@@ -64,7 +64,7 @@ describe("Sandbox contract", () => {
     expect(sbx.getHost(8080)).toBe("https://sbx_host_1-8080.preview.example.com");
   });
 
-  it("defaults getHost() to a non-claudebox preview domain", async () => {
+  it("throws from deprecated getHost() when no preview domain is configured", async () => {
     const prev = process.env.OMNIRUN_PREVIEW_DOMAIN;
     delete process.env.OMNIRUN_PREVIEW_DOMAIN;
     try {
@@ -81,9 +81,7 @@ describe("Sandbox contract", () => {
         apiKey: "test-key",
       });
 
-      const host = sbx.getHost(8080);
-      expect(host).not.toContain("claudebox.io");
-      expect(host).toBe("https://sbx_host_2-8080.omnirun-preview.dev");
+      expect(() => sbx.getHost(8080)).toThrow(/getPreviewUrl/);
     } finally {
       if (prev === undefined) delete process.env.OMNIRUN_PREVIEW_DOMAIN;
       else process.env.OMNIRUN_PREVIEW_DOMAIN = prev;
@@ -176,5 +174,45 @@ describe("Sandbox contract", () => {
     const url = String(fetchMock.mock.calls[0][0]);
     expect(url).toContain("metadata=team%3Aruntime");
     expect(url).not.toContain("metadata.team");
+  });
+
+  it("passes sniProxy through in the create network policy", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ sandboxID: "sbx_net_1" }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await Sandbox.create("python-3.11", {
+      apiUrl: "https://api.omnirun.io",
+      apiKey: "test-key",
+      network: { allowDomains: ["api.example.com"], sniProxy: true },
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const payload = JSON.parse(String(init.body));
+    expect(payload.network).toEqual({ allowDomains: ["api.example.com"], sniProxy: true });
+  });
+
+  it("rejects sniProxy in setNetworkPolicy() instead of letting the server drop it", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ sandboxID: "sbx_net_2" }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const sbx = await Sandbox.create("python-3.11", {
+      apiUrl: "https://api.omnirun.io",
+      apiKey: "test-key",
+    });
+
+    await expect(
+      sbx.setNetworkPolicy({ allowDomains: ["api.example.com"], sniProxy: true })
+    ).rejects.toThrow(/Sandbox.create/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

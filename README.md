@@ -117,15 +117,52 @@ for await (const event of command) {
 ## Production Controls
 
 ```ts
-// Network policy
-await sbx.production.setNetworkPolicy({
-  allowDomains: ["api.openai.com"],
-});
-
 // Metrics
 const metrics = await sbx.production.metrics();
 const snapshots = await sbx.production.metricsSnapshots();
 ```
+
+### Network policy (read the caveats)
+
+Outbound network access from a sandbox is **open by default**. A network
+policy only enforces a domain allowlist when you opt in to the SNI proxy, and
+even then it covers **HTTPS (TCP/443) only**:
+
+```ts
+const sbx = await Sandbox.create("python-3.11", {
+  network: {
+    allowDomains: ["api.openai.com"],
+    sniProxy: true, // required for allowDomains to be enforced
+  },
+});
+```
+
+- With `sniProxy: true`, outbound TCP/443 is routed through a TLS-SNI filter
+  that only forwards hostnames in `allowDomains`. Plain HTTP (port 80), DNS,
+  UDP and other TCP ports are **not** restricted by this policy, and
+  `denyDomains` / `allowIPs` / `denyIPs` are ignored. The server must have the
+  `omni-sniproxy` binary configured, otherwise sandbox creation fails.
+- `sniProxyLogOnly: true` (with `sniProxy: true`) forwards everything and only
+  logs observed hostnames, to help you build an allowlist.
+- Without `sniProxy`, `allowDomains` is **not** an allowlist: domains and IPs
+  are resolved to IP firewall rules that do not constrain the guest VM's own
+  traffic. Do not rely on it for isolation.
+- `sniProxy` is currently accepted only at creation. `sbx.production.setNetworkPolicy()`
+  throws if you pass it, rather than silently applying nothing.
+
+## Preview URLs
+
+Use the exposures API to get a routable URL for a port inside the sandbox:
+
+```ts
+const url = await sbx.getPreviewUrl(3000); // reuses a live public exposure or creates one
+const exposure = await sbx.expose(3000, { ttlSeconds: 900 }); // full ExposureInfo
+```
+
+`sbx.getHost(port)` is **deprecated**: it builds the legacy
+`{sandboxId}-{port}.<domain>` hostname, which hosted OmniRun no longer routes.
+It now has no default domain and throws unless you pass `previewDomain` (or set
+`OMNIRUN_PREVIEW_DOMAIN`) for a self-hosted proxy that still serves that pattern.
 
 ## LLM Proxy
 
@@ -176,7 +213,7 @@ console.log(`Remaining: ${usage.remainingCents / 100} USD`);
 | `sbx.pty` | `create()`, `resize()`, `write()` | Interactive terminal (PTY) sessions |
 | `sbx.contexts` | `create()`, `execute()` | Persistent interpreter contexts (REPL) |
 | `sbx.desktop` | `screenshot()`, `leftClick()`, `type()`, `press()` | Desktop GUI interaction |
-| `sbx.exposures` | `create()`, `list()`, `close()` | Port exposure and preview URLs |
+| `sbx.exposures` | `create()`, `list()`, `get()`, `refresh()`, `close()` | Port exposure and preview URLs (see also `sbx.getPreviewUrl()`) |
 | `sbx.production` | `setNetworkPolicy()`, `metrics()` | Network policies and monitoring |
 | `sbx.webhooks` | `create()`, `list()`, `delete()` | Webhook registration |
 | `LLM` | `chatCompletion()`, `streamChatCompletion()`, `listModels()` | LLM inference gateway |
