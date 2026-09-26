@@ -72,10 +72,12 @@ OMNIRUN_STRICT_NETWORK_POLICY_CHECK=1
 - E2EE handshake roundtrip when `serverPublicKey` is returned
 - normal API operations (commands/files)
 
-To also validate traffic-token gate behavior on your port-proxy domain, set:
+To also validate traffic-token gate behavior on a port proxy that still serves the
+legacy `{sandboxId}-{port}.<domain>` hostname pattern (hosted OmniRun preview URLs
+are issued via the exposures API instead, so this check does not apply there), set:
 
 ```bash
-OMNIRUN_SECURE_PROXY_URL_TEMPLATE=https://${SANDBOX_ID}-${PORT}.omnirun-preview.dev/secure-proxy.txt
+OMNIRUN_SECURE_PROXY_URL_TEMPLATE=https://${SANDBOX_ID}-${PORT}.<your-legacy-proxy-domain>/secure-proxy.txt
 ```
 
 To make that check strict/failing when proxy behavior is unexpected:
