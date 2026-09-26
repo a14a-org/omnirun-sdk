@@ -217,7 +217,7 @@ would be sent over plain HTTP.
 
 ## Related
 
-- [Python SDK](https://github.com/a14a-org/omnirun-sdk-python) -- `pip install omnirun`
+- [Python SDK](https://github.com/a14a-org/omnirun-sdk-python) -- `pip install omnirun-sdk`
 - [Examples](https://github.com/a14a-org/omnirun-examples) -- 11 practical examples
 - [CLI](https://www.npmjs.com/package/@omnirun/cli) -- `npm install -g @omnirun/cli`
 - [Documentation](https://omnirun.io/docs)
