@@ -30,7 +30,6 @@ import { makeCommandResult } from "./utils.js";
 import { Webhooks } from "./webhooks.js";
 
 /** Default domain for sandbox preview URLs when none is configured. */
-const DEFAULT_PREVIEW_DOMAIN = "omnirun-preview.dev";
 
 /**
  * Rethrow a 404 {@link SandboxError} as a {@link SandboxNotFoundError} so callers
@@ -146,15 +145,14 @@ export class Sandbox {
   e2ee: E2EESessionInfo | null = null;
   trafficAccessToken: string = "";
   private client: HTTPClient;
-  private previewDomain: string;
+  private previewDomain: string | undefined;
   private keepAliveInterval: ReturnType<typeof setInterval> | null = null;
 
   private constructor(sandboxId: string, client: HTTPClient, previewDomain?: string) {
     this.sandboxId = sandboxId;
     this.client = client;
     this.previewDomain = previewDomain
-      || (typeof process !== "undefined" ? process.env.OMNIRUN_PREVIEW_DOMAIN : undefined)
-      || DEFAULT_PREVIEW_DOMAIN;
+      || (typeof process !== "undefined" ? process.env.OMNIRUN_PREVIEW_DOMAIN : undefined);
     this.commands = new Commands(sandboxId, client);
     this.files = new Filesystem(sandboxId, client);
     this.pty = new Pty(sandboxId, client);
@@ -180,7 +178,7 @@ export class Sandbox {
    * @param opts.maskRequestHost - Mask the request host header.
    * @param opts.autoPause - Auto-pause the sandbox after inactivity.
    * @param opts.keepAlive - Heartbeat interval in seconds to prevent auto-kill.
-   * @param opts.network - Network policy (allow/deny domains and IPs).
+   * @param opts.network - Network policy. Only `sniProxy: true` enforces `allowDomains`, and only for HTTPS (TCP/443); see {@link NetworkPolicy}.
    * @param opts.e2ee - E2EE bootstrap options or `true` for defaults.
    * @param opts.vaultInject - Inject vault credentials as env vars via `/tmp/.omnirun-env`.
    * @param opts.requestTimeout - HTTP request timeout in milliseconds.
@@ -389,9 +387,52 @@ export class Sandbox {
     return makeCommandResult(data);
   }
 
-  /** Get public URL for a port exposed inside the sandbox. */
+  /**
+   * Build a legacy `https://{sandboxId}-{port}.<previewDomain>` URL.
+   *
+   * @deprecated Hosted OmniRun no longer routes this hostname pattern; preview
+   * URLs are issued by the exposures API. Use {@link getPreviewUrl} (or
+   * {@link expose} / {@link exposures}) instead. This method only works with a
+   * self-hosted proxy that still serves the legacy pattern, and it requires an
+   * explicit `previewDomain` option or `OMNIRUN_PREVIEW_DOMAIN` env var.
+   *
+   * @throws {SandboxError} If no preview domain was configured.
+   */
   getHost(port: number): string {
+    if (!this.previewDomain) {
+      throw new SandboxError(
+        "getHost() is deprecated and has no default preview domain: the legacy " +
+          "{sandboxId}-{port}.<domain> URL pattern is not routed by hosted OmniRun. " +
+          "Use `await sandbox.getPreviewUrl(port)` (or `sandbox.expose(port)`) to get a working preview URL. " +
+          "If you run a proxy that serves the legacy pattern, pass `previewDomain` or set OMNIRUN_PREVIEW_DOMAIN."
+      );
+    }
     return `https://${this.sandboxId}-${port}.${this.previewDomain}`;
+  }
+
+  /**
+   * Get a working public URL for a port inside the sandbox, via the exposures API.
+   *
+   * Reuses an existing public `ready` or `pending` exposure for the port when
+   * one exists; otherwise creates a new one with `opts`. Private exposures are
+   * never reused (their tokenized `accessUrl` is only returned at creation), so
+   * requesting `visibility: "private"` always creates a new exposure and
+   * returns its `accessUrl`.
+   *
+   * @param port - Sandbox-internal port (1-65535).
+   * @param opts - Options used only when a new exposure has to be created.
+   */
+  async getPreviewUrl(port: number, opts?: CreateExposureOptions): Promise<string> {
+    const existing = opts?.visibility === "private"
+      ? undefined
+      : (await this.exposures.list()).find(
+          (e) =>
+            e.port === port &&
+            e.visibility === "public" &&
+            (e.status === "ready" || e.status === "pending")
+        );
+    const exposure = existing ?? (await this.exposures.create(port, opts));
+    return exposure.accessUrl || exposure.url;
   }
 
   /** Create a managed preview URL for a sandbox port. */
