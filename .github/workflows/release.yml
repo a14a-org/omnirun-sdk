@@ -5,13 +5,16 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
+  contents: read
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      # npm provenance (publishConfig.provenance) needs the OIDC token.
+      id-token: write
     steps:
       - uses: actions/checkout@v7
 
@@ -22,7 +25,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Test and build
         run: |
