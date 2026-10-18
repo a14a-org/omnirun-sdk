@@ -33,10 +33,10 @@ jobs:
       - name: Version or Publish
         uses: changesets/action@v2.1.2
         with:
-          version: npm run version-packages
-          publish: npm run release
-          title: "chore: release @omnirun/sdk"
-          commit: "chore: release @omnirun/sdk"
+          version-script: npm run version-packages
+          publish-script: npm run release
+          pr-title: "chore: release @omnirun/sdk"
+          commit-message: "chore: release @omnirun/sdk"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
