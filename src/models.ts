@@ -160,7 +160,11 @@ export interface CreateSandboxOptions {
   keepAlive?: number;
   /** Auto-pause the sandbox after a period of inactivity instead of killing it. */
   autoPause?: boolean;
-  /** Network policy controlling allowed/denied domains and IPs for outbound traffic. */
+  /**
+   * Network policy applied at creation. Only `sniProxy: true` gives real
+   * enforcement, and then only of `allowDomains` for HTTPS (TCP/443); see
+   * {@link NetworkPolicy} for the exact semantics.
+   */
   network?: NetworkPolicy;
   /** Enable E2E encrypted mode for the sandbox. */
   secure?: boolean;
@@ -170,7 +174,13 @@ export interface CreateSandboxOptions {
   vaultInject?: boolean;
   /** Client-side E2EE bootstrap options (key generation + public key announcement). Pass `true` for defaults. */
   e2ee?: boolean | E2EECreateOptions;
-  /** Domain used for sandbox preview URLs (e.g. `"omnirun-preview.dev"`). Falls back to `OMNIRUN_PREVIEW_DOMAIN` env var, then `"omnirun-preview.dev"`. */
+  /**
+   * @deprecated Only used by the deprecated `Sandbox.getHost()`, which
+   * builds legacy `{sandboxId}-{port}.<previewDomain>` URLs that hosted
+   * OmniRun no longer routes. Use `sandbox.getPreviewUrl(port)` or
+   * `sandbox.expose(port)` instead. Falls back to the `OMNIRUN_PREVIEW_DOMAIN`
+   * env var; there is no built-in default.
+   */
   previewDomain?: string;
 }
 
@@ -235,16 +245,60 @@ export interface SandboxMetrics {
   uptime: string;
 }
 
-/** Network policy controlling outbound traffic from a sandbox. */
+/**
+ * Network policy for outbound traffic from a sandbox.
+ *
+ * **Read this before relying on it for isolation.** What is actually enforced
+ * depends on `sniProxy`:
+ *
+ * - **`sniProxy: true`** (opt-in; the server operator must have configured the
+ *   `omni-sniproxy` binary, otherwise the request fails): the guest's outbound
+ *   **TCP/443 only** is redirected to a TLS-SNI-filtering proxy that forwards
+ *   connections whose SNI hostname is in `allowDomains` and drops the rest.
+ *   All other egress (plain HTTP on port 80, DNS, UDP, any other TCP port) is
+ *   **not** filtered by this policy. `denyDomains`, `allowIPs` and `denyIPs`
+ *   are ignored in this mode.
+ * - **Without `sniProxy`**: domains are resolved to IPs once, at policy-set
+ *   time, and installed as firewall rules in the sandbox network namespace.
+ *   These rules do not constrain the guest VM's own forwarded traffic, so they
+ *   should **not** be treated as an egress control; outbound access remains
+ *   whatever the sandbox otherwise has.
+ *
+ * Egress is otherwise open by default. For real isolation, combine
+ * `sniProxy: true` with your own controls for non-HTTPS traffic.
+ */
 export interface NetworkPolicy {
-  /** Domains the sandbox is allowed to reach. If set, only these domains are permitted. */
+  /**
+   * Hostnames the sandbox may reach over HTTPS (TCP/443), matched against the
+   * TLS SNI. Enforced only when `sniProxy` is `true`, and then only for
+   * TCP/443 — other ports and protocols are not restricted. Without
+   * `sniProxy` this list is resolved to IPs and does not act as an allowlist
+   * for guest traffic.
+   */
   allowDomains?: string[];
-  /** Domains the sandbox is explicitly blocked from reaching. */
+  /** Domains resolved to IPs and blocked at policy-set time. Not an effective guest egress control; ignored when `sniProxy` is `true`. */
   denyDomains?: string[];
-  /** IP addresses or CIDR ranges the sandbox is allowed to reach. */
+  /** IP addresses or CIDR ranges to allow. Not an effective guest egress control; ignored when `sniProxy` is `true`. */
   allowIPs?: string[];
-  /** IP addresses or CIDR ranges the sandbox is explicitly blocked from reaching. */
+  /** IP addresses or CIDR ranges to block. Not an effective guest egress control; ignored when `sniProxy` is `true`. */
   denyIPs?: string[];
+  /**
+   * Enforce `allowDomains` for outbound HTTPS (TCP/443) via an in-namespace
+   * TLS-SNI-filtering proxy. Requires a non-empty `allowDomains` (unless
+   * `sniProxyLogOnly` is set) and server-side `omni-sniproxy` support.
+   *
+   * Currently honored only at creation time (`Sandbox.create({ network })`);
+   * `Production.setNetworkPolicy()` rejects it client-side because the
+   * `POST /sandboxes/{id}/network-policy` endpoint does not accept it.
+   */
+  sniProxy?: boolean;
+  /**
+   * Run the SNI proxy in discovery mode: forward all HTTPS connections (no
+   * enforcement) but log each observed SNI hostname. Use it to learn which
+   * hosts a workload needs before enabling an enforced allowlist. Only
+   * meaningful together with `sniProxy: true`.
+   */
+  sniProxyLogOnly?: boolean;
 }
 
 // Webhook types

@@ -1,4 +1,5 @@
 import type { HTTPClient } from "./client.js";
+import { SandboxError } from "./errors.js";
 import type { MetricsSnapshot, NetworkPolicy, SandboxMetrics } from "./models.js";
 
 /** Map a raw metrics snapshot from the API (snake_case) to a {@link MetricsSnapshot}. */
@@ -74,8 +75,24 @@ export class Production {
     return data.map(parseMetricsSnapshot);
   }
 
-  /** Set network policy for the sandbox. */
+  /**
+   * Set network policy for a running sandbox.
+   *
+   * Note: without `sniProxy` the resulting rules are not an effective egress
+   * control for guest traffic (see {@link NetworkPolicy}). `sniProxy` itself is
+   * only accepted at creation time via `Sandbox.create({ network })`; passing it
+   * here throws instead of being silently dropped by the server.
+   *
+   * @throws {SandboxError} If `sniProxy` or `sniProxyLogOnly` is set.
+   */
   async setNetworkPolicy(policy: NetworkPolicy): Promise<void> {
+    if (policy.sniProxy || policy.sniProxyLogOnly) {
+      throw new SandboxError(
+        "sniProxy is not supported by setNetworkPolicy(): the network-policy endpoint ignores it, " +
+          "so no domain enforcement would be applied. Pass the policy at creation instead: " +
+          "Sandbox.create(template, { network: { allowDomains: [...], sniProxy: true } })."
+      );
+    }
     await this.client.post(`${this.baseUrl}/network-policy`, {
       allowDomains: policy.allowDomains,
       denyDomains: policy.denyDomains,
