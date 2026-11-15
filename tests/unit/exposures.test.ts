@@ -107,4 +107,68 @@ describe("Exposures", () => {
     );
     expect((fetchMock.mock.calls[2][1] as RequestInit)?.method).toBe("DELETE");
   });
+
+  it("getPreviewUrl() reuses a ready public exposure for the port", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ sandboxID: "sbx_123" }), {
+          status: 201,
+          headers: { "content-type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            { id: "exp_old", port: 3000, url: "https://old.omnirun-preview.dev", visibility: "public", status: "expired" },
+            { id: "exp_ok", port: 3000, url: "https://live.omnirun-preview.dev", visibility: "public", status: "ready" },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } }
+        )
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const sandbox = await Sandbox.create("node-22", {
+      apiUrl: "https://api.omnirun.io",
+      apiKey: "test-key",
+    });
+    const url = await sandbox.getPreviewUrl(3000);
+
+    expect(url).toBe("https://live.omnirun-preview.dev");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("getPreviewUrl() creates an exposure when none is live", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ sandboxID: "sbx_123" }), {
+          status: 201,
+          headers: { "content-type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ id: "exp_new", port: 8080, url: "https://new.omnirun-preview.dev", visibility: "public", status: "pending" }),
+          { status: 201, headers: { "content-type": "application/json" } }
+        )
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const sandbox = await Sandbox.create("node-22", {
+      apiUrl: "https://api.omnirun.io",
+      apiKey: "test-key",
+    });
+    const url = await sandbox.getPreviewUrl(8080, { ttlSeconds: 600 });
+
+    expect(url).toBe("https://new.omnirun-preview.dev");
+    expect((fetchMock.mock.calls[2][1] as RequestInit)?.method).toBe("POST");
+    expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toMatchObject({ port: 8080 });
+  });
 });
